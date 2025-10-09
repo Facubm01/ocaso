@@ -1,0 +1,15 @@
+# 🧹 Node / React
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.*.local
+
+# 🧹 Java / Maven / Gradle
+backend/target/
+backend/build/
+backend/*.log
+
+# 🧹 IDE / OS
+.vscode/
+.idea/
+.DS_Store
