@@ -1,0 +1,80 @@
+/* Paleta */
+:root {
+  --ocaso-dark: #212529; /* igual a bg-dark de la navbar */
+  --ocaso-offwhite: #f8f9fa; /* fondo claro agradable */
+  --ocaso-border: #e5e7eb; /* borde suave en claro */
+}
+
+/* Body oscuro + texto por defecto oscuro en el área clara */
+html,
+body {
+  background: var(--ocaso-dark);
+}
+
+/* Área de contenido (entre navbar y footer) */
+.site-main {
+  background: var(--ocaso-offwhite);
+  color: #212529;
+  min-height: 100dvh; /* asegura altura visual */
+}
+
+/* Cards en modo claro por defecto */
+.card {
+  background: #fff; /* cartas blancas en contenido claro */
+  border-color: var(--ocaso-border);
+  border-radius: 1rem;
+}
+
+/* Navbar mantiene su estilo (ya lo tenés con bg-dark) */
+
+/* Footer oscuro (si usás uno global) */
+.site-footer {
+  background: var(--ocaso-dark);
+  color: #fff;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Hero full-screen (sigue funcionando sobre el offwhite) */
+.hero-ocaso {
+  height: 100vh;
+  background-image: url("/src/assets/fondo_hero2.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  position: relative;
+}
+.hero-ocaso::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+.hero-ocaso .container {
+  position: relative;
+  z-index: 2;
+}
+
+/* Botones primarios al color de marca (oscuro) */
+:root {
+  --bs-primary: var(--ocaso-dark);
+  --bs-primary-rgb: 33, 37, 41;
+}
+.btn-primary {
+  --bs-btn-bg: var(--ocaso-dark);
+  --bs-btn-border-color: var(--ocaso-dark);
+  --bs-btn-color: #fff;
+  --bs-btn-hover-bg: #343a40;
+  --bs-btn-hover-border-color: #343a40;
+  --bs-btn-active-bg: #1c1f23;
+  --bs-btn-active-border-color: #1c1f23;
+  --bs-btn-focus-shadow-rgb: var(--bs-primary-rgb);
+}
+
+.product-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08);
+}

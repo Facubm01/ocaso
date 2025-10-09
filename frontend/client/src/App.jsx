@@ -1,0 +1,35 @@
+import { Routes, Route } from "react-router-dom";
+import Header from "./components/Header";
+import Home from "./pages/Home";
+import Shop from "./pages/Shop";
+import ProductDetail from "./pages/ProductDetail";
+import Cart from "./pages/Cart";
+import Community from "./pages/Community";
+
+export default function App() {
+  return (
+    <>
+      <Header />
+      <Routes>
+        <Route path="/" element={<Home />} />{" "}
+        {/* antes mostraba el div “Home” */}
+        <Route path="/shop" element={<Shop />} />
+        <Route
+          path="/last-call"
+          element={<div className="container py-4 text-light">Last Call</div>}
+        />
+        <Route
+          path="/search"
+          element={<div className="container py-4 text-light">Buscar</div>}
+        />
+        <Route
+          path="/account"
+          element={<div className="container py-4 text-light">Perfil</div>}
+        />
+        <Route path="/producto/:id" element={<ProductDetail />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/community" element={<Community />} />
+      </Routes>
+    </>
+  );
+}
