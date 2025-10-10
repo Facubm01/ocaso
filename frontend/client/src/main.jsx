@@ -12,13 +12,16 @@ import "./index.css";
 
 // Context del carrito
 import { CartProvider } from "./context/CartContext";
+import { AuthProvider } from "./context/AuthContext";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <CartProvider>
-      <Router>
-        <App />
-      </Router>
-    </CartProvider>
+    <AuthProvider>
+      <CartProvider>
+        <Router>
+          <App />
+        </Router>
+      </CartProvider>
+    </AuthProvider>
   </StrictMode>
 );

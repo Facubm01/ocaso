@@ -1,8 +1,10 @@
 import { Link, NavLink } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 
 const Header = () => {
   const { totalCantidad } = useCart(); // 👈 cantidad total en el carrito
+  const { isAuthenticated } = useAuth();
 
   return (
     <nav
@@ -47,12 +49,17 @@ const Header = () => {
             <i className="bi bi-search"></i>
           </NavLink>
           <NavLink
-            to="/account"
+            to={isAuthenticated ? "/account" : "/login"}
             className="nav-link text-light p-0"
-            aria-label="Perfil"
+            aria-label={isAuthenticated ? "Perfil" : "Iniciar sesión"}
           >
-            <i className="bi bi-person"></i>
+            <i className={`bi ${isAuthenticated ? "bi-person" : "bi-box-arrow-in-right"}`}></i>
           </NavLink>
+          {!isAuthenticated && (
+            <Link to="/register" className="btn btn-outline-light btn-sm">
+              Registrarse
+            </Link>
+          )}
 
           {/* Carrito con badge */}
           <NavLink

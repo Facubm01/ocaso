@@ -5,13 +5,16 @@ import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Community from "./pages/Community";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Account from "./pages/Account";
 
 export default function App() {
   return (
     <>
       <Header />
       <Routes>
-        <Route path="/" element={<Home />} />{" "}
+        <Route path="/" element={<Home />} />
         {/* antes mostraba el div “Home” */}
         <Route path="/shop" element={<Shop />} />
         <Route
@@ -22,10 +25,9 @@ export default function App() {
           path="/search"
           element={<div className="container py-4 text-light">Buscar</div>}
         />
-        <Route
-          path="/account"
-          element={<div className="container py-4 text-light">Perfil</div>}
-        />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/account" element={<Account />} />
         <Route path="/producto/:id" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/community" element={<Community />} />
