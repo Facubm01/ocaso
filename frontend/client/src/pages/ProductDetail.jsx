@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
+import { useCart } from "../context/CartContext";
+
 const ProductDetail = () => {
   const { id } = useParams();
 
@@ -58,30 +60,22 @@ const ProductDetail = () => {
   const prev = () => setActive((i) => (i - 1 + images.length) % images.length);
   const next = () => setActive((i) => (i + 1) % images.length);
 
+  const { add } = useCart();
+
   const handleAddToCart = () => {
     if (!p) return;
-    if (!talle) {
-      alert("Elegí un talle");
-      return;
-    }
-    const item = {
+    if (!talle) return alert("Elegí un talle");
+
+    add({
       productoId: p.id,
       nombre: p.nombre,
-      // guardo la 1ra imagen para miniaturas del carrito
-      imagenUrl: images[0],
+      imagenUrl: p.imageId
+        ? `/api/images/${p.imageId}/raw`
+        : "/img/placeholder.png",
       talle,
       cantidad,
       precioUnitario: Number(p.precioFinal),
-    };
-
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-    const idx = cart.findIndex(
-      (x) => x.productoId === item.productoId && x.talle === item.talle
-    );
-    if (idx >= 0) cart[idx].cantidad += item.cantidad;
-    else cart.push(item);
-
-    localStorage.setItem("cart", JSON.stringify(cart));
+    });
     alert("Agregado al carrito");
   };
 

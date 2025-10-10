@@ -1,6 +1,9 @@
 import { Link, NavLink } from "react-router-dom";
+import { useCart } from "../context/CartContext";
 
 const Header = () => {
+  const { totalCantidad } = useCart(); // 👈 cantidad total en el carrito
+
   return (
     <nav
       className="navbar navbar-dark bg-dark border-bottom sticky-top position-relative py-3"
@@ -50,12 +53,22 @@ const Header = () => {
           >
             <i className="bi bi-person"></i>
           </NavLink>
+
+          {/* Carrito con badge */}
           <NavLink
             to="/cart"
-            className="nav-link text-light p-0"
+            className="nav-link text-light p-0 position-relative"
             aria-label="Carrito"
           >
             <i className="bi bi-bag"></i>
+            {totalCantidad > 0 && (
+              <span
+                className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                style={{ fontSize: "0.6rem" }}
+              >
+                {totalCantidad}
+              </span>
+            )}
           </NavLink>
         </div>
       </div>
