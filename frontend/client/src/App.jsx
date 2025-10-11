@@ -8,6 +8,7 @@ import Community from "./pages/Community";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Account from "./pages/Account";
+import Admin from "./pages/Admin";
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/account" element={<Account />} />
+        <Route path="/admin" element={<Admin />} />
         <Route path="/producto/:id" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/community" element={<Community />} />
