@@ -1,10 +1,18 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 const AuthContext = createContext(null);
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 const REGISTER_ENDPOINT = `${API_BASE_URL}/api/auth/register`;
 const LOGIN_ENDPOINT = `${API_BASE_URL}/api/auth/login`;
+const PROFILE_ENDPOINT = `${API_BASE_URL}/api/auth/me`;
 
 const TOKEN_STORAGE_KEY = "authToken";
 const PROFILE_STORAGE_KEY = "authProfile";
@@ -34,9 +42,23 @@ const parseAuthResponse = async (response) => {
   return data;
 };
 
+const extractErrorMessage = async (response) => {
+  const raw = await response.text().catch(() => "");
+  if (!raw) {
+    return `HTTP ${response.status}`;
+  }
+  try {
+    const data = JSON.parse(raw);
+    return data?.message ?? data?.error ?? `HTTP ${response.status}`;
+  } catch (error) {
+    return raw;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY));
   const [profile, setProfile] = useState(() => readStoredProfile());
+  const [isProfileLoading, setProfileLoading] = useState(false);
 
   const saveSession = useCallback((accessToken, userProfile) => {
     localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
@@ -57,6 +79,42 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setProfile(null);
   }, []);
+
+  const fetchProfile = useCallback(
+    async (accessToken) => {
+      if (!accessToken) {
+        return null;
+      }
+
+      setProfileLoading(true);
+      try {
+        const response = await fetch(PROFILE_ENDPOINT, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          const message = await extractErrorMessage(response);
+          if (response.status === 401 || response.status === 403) {
+            clearSession();
+          }
+          throw new Error(message);
+        }
+
+        const data = await response.json();
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(data));
+        setProfile(data);
+        return data;
+      } catch (error) {
+        console.error("No se pudo obtener el perfil del usuario", error);
+        throw error;
+      } finally {
+        setProfileLoading(false);
+      }
+    },
+    [clearSession]
+  );
 
   const register = useCallback(
     async ({ firstName, lastName, email, password }) => {
@@ -93,16 +151,31 @@ export const AuthProvider = ({ children }) => {
     clearSession();
   }, [clearSession]);
 
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+
+    fetchProfile(token).catch((error) => {
+      console.error("No se pudo refrescar la sesión del usuario", error);
+    });
+  }, [token, fetchProfile]);
+
+  const refreshProfile = useCallback(() => fetchProfile(token), [fetchProfile, token]);
+
   const value = useMemo(
     () => ({
       token,
       profile,
       isAuthenticated: Boolean(token),
+      isAdmin: profile?.role === "ADMIN",
+      isProfileLoading,
       register,
       login,
       logout,
+      refreshProfile,
     }),
-    [token, profile, register, login, logout]
+    [token, profile, isProfileLoading, register, login, logout, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

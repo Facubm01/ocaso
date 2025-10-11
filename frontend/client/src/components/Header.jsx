@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 
 const Header = () => {
   const { totalCantidad } = useCart(); // 👈 cantidad total en el carrito
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
 
   return (
     <nav
@@ -29,6 +29,13 @@ const Header = () => {
               Community
             </NavLink>
           </li>
+          {isAdmin && (
+            <li className="nav-item">
+              <NavLink to="/admin" className="nav-link text-light">
+                Admin
+              </NavLink>
+            </li>
+          )}
         </ul>
 
         {/* Centro */}
