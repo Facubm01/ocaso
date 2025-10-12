@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Account from "./pages/Account";
 import Admin from "./pages/Admin";
+import Checkout from "./pages/Checkout";
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/producto/:id" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/community" element={<Community />} />
+        <Route path="/checkout" element={<Checkout />} />
       </Routes>
     </>
   );

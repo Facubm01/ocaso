@@ -9,7 +9,8 @@ import {
 
 const AuthContext = createContext(null);
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4002";
 const REGISTER_ENDPOINT = `${API_BASE_URL}/api/auth/register`;
 const LOGIN_ENDPOINT = `${API_BASE_URL}/api/auth/login`;
 const PROFILE_ENDPOINT = `${API_BASE_URL}/api/auth/me`;
@@ -56,7 +57,9 @@ const extractErrorMessage = async (response) => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY));
+  const [token, setToken] = useState(() =>
+    localStorage.getItem(TOKEN_STORAGE_KEY)
+  );
   const [profile, setProfile] = useState(() => readStoredProfile());
   const [isProfileLoading, setProfileLoading] = useState(false);
 
@@ -161,7 +164,10 @@ export const AuthProvider = ({ children }) => {
     });
   }, [token, fetchProfile]);
 
-  const refreshProfile = useCallback(() => fetchProfile(token), [fetchProfile, token]);
+  const refreshProfile = useCallback(
+    () => fetchProfile(token),
+    [fetchProfile, token]
+  );
 
   const value = useMemo(
     () => ({
