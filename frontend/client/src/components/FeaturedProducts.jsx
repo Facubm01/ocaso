@@ -1,58 +1,72 @@
+// src/components/FeaturedProducts.jsx
+import { useEffect, useMemo, useState } from "react";
+import ProductsGrid from "./ProductsGrid";
+
+function resolveImagenUrl(p) {
+  if (Array.isArray(p.imageIds) && p.imageIds.length)
+    return `/api/images/${p.imageIds[0]}/raw`;
+  if (p.imageId) return `/api/images/${p.imageId}/raw`;
+  if (p.imagenUrl) return p.imagenUrl; // por si ya viene armado
+  return "/img/placeholder.png";
+}
+
 export default function FeaturedProducts() {
-  const products = [
-    {
-      id: 1,
-      name: "Chaqueta Bomber",
-      description: "Nueva chaqueta bomber",
-      price: 79999,
-      img: "https://picsum.photos/seed/bomber/600/400",
-    },
-    {
-      id: 2,
-      name: "Sudadera con Capucha",
-      description: "Cómoda y con estilo",
-      price: 49999,
-      img: "https://picsum.photos/seed/hoodie/600/400",
-    },
-    {
-      id: 3,
-      name: "Gorra de Béisbol",
-      description: "Diseño exclusivo",
-      price: 29999,
-      img: "https://picsum.photos/seed/cap/600/400",
-    },
-  ];
+  const [all, setAll] = useState([]);
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setErr("");
+    fetch(`/api/productos`)
+      .then(async (res) => {
+        if (!res.ok)
+          throw new Error(
+            (await res.text().catch(() => "")) || `HTTP ${res.status}`
+          );
+        return res.json();
+      })
+      .then((list) => {
+        if (!alive) return;
+        const normalized = (Array.isArray(list) ? list : []).map((p) => ({
+          ...p,
+          imagenUrl: resolveImagenUrl(p), // <- para tu ProductCard
+        }));
+        setAll(normalized);
+      })
+      .catch((e) => setErr(e.message || "No se pudieron cargar productos."))
+      .finally(() => setLoading(false));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // últimos 6: createdAt desc si existe; si no, id desc
+  const featured = useMemo(() => {
+    const sorted = [...all].sort((a, b) => {
+      const ad = a.createdAt ? new Date(a.createdAt).getTime() : null;
+      const bd = b.createdAt ? new Date(b.createdAt).getTime() : null;
+      if (ad != null && bd != null) return bd - ad;
+      return (b.id ?? 0) - (a.id ?? 0);
+    });
+    return sorted.slice(0, 6);
+  }, [all]);
 
   return (
     <section className="py-5" style={{ backgroundColor: "#f8f9fa" }}>
       <div className="container">
         <h2 className="h3 mb-4 text-center">Destacados</h2>
 
-        <div className="row g-4">
-          {products.map((p) => (
-            <div key={p.id} className="col-12 col-md-6 col-lg-4">
-              <div className="card h-100 shadow-sm rounded-4 border-0">
-                <img
-                  src={p.img}
-                  alt={p.name}
-                  className="card-img-top"
-                  style={{ objectFit: "cover", height: 260 }}
-                />
+        {loading && <p className="text-center text-muted">Cargando…</p>}
+        {err && <div className="alert alert-danger text-center">{err}</div>}
+        {!loading && !err && featured.length === 0 && (
+          <p className="text-center text-muted">
+            No hay productos para mostrar.
+          </p>
+        )}
 
-                <div className="card-body">
-                  <h5 className="card-title mb-2 text-dark">{p.name}</h5>
-                  <p className="card-text text-muted small">{p.description}</p>
-                  <p className="fw-bold fs-5 mb-3">
-                    €{(p.price / 100).toFixed(2)}
-                  </p>
-                  <button className="btn btn-primary w-100">
-                    Agregar al carrito
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        {featured.length > 0 && <ProductsGrid items={featured} />}
       </div>
     </section>
   );

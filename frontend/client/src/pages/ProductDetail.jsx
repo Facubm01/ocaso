@@ -1,24 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-
 import { useCart } from "../context/CartContext";
 
 const ProductDetail = () => {
   const { id } = useParams();
+  const { add } = useCart();
 
   const [p, setP] = useState(null);
   const [error, setError] = useState("");
   const [talle, setTalle] = useState("");
   const [cantidad, setCantidad] = useState(1);
-
-  // índice del carrusel
   const [active, setActive] = useState(0);
 
   useEffect(() => {
     setError("");
     setP(null);
     setActive(0);
-
+    setTalle("");
+    setCantidad(1);
     fetch(`/api/productos/${id}`)
       .then(async (res) => {
         if (!res.ok)
@@ -36,10 +35,23 @@ const ProductDetail = () => {
     return p.talles.filter((pt) => pt.stock > 0).map((pt) => pt.talle);
   }, [p]);
 
+  // stock del talle seleccionado
+  const maxStock = useMemo(() => {
+    if (!p || !Array.isArray(p.talles) || !talle) return 0;
+    const found = p.talles.find(
+      (pt) => String(pt.talle).toUpperCase() === String(talle).toUpperCase()
+    );
+    return Number(found?.stock ?? 0);
+  }, [p, talle]);
+
+  // clamp cantidad al cambiar talle o stock
+  useEffect(() => {
+    if (maxStock > 0) setCantidad((c) => Math.min(Math.max(1, c), maxStock));
+    else setCantidad(1);
+  }, [maxStock]);
+
   const tieneDescuento = p && (p.descuentoPct ?? 0) > 0;
 
-  // Armo el array de imágenes para el carrusel:
-  // soporta imageIds, imagenUrl, o placeholder.
   const images = useMemo(() => {
     const out = [];
     if (Array.isArray(p?.imageIds) && p.imageIds.length) {
@@ -54,18 +66,24 @@ const ProductDetail = () => {
     return out.length ? out : ["/img/placeholder.png"];
   }, [p]);
 
-  const precioOriginal = Number(p?.precioOriginal ?? 0).toFixed(2);
-  const precioFinal = Number(p?.precioFinal ?? 0).toFixed(2);
+  const precioOriginal = Number(p?.precioOriginal ?? 0).toLocaleString(
+    "es-AR",
+    {
+      minimumFractionDigits: 2,
+    }
+  );
+  const precioFinal = Number(p?.precioFinal ?? 0).toLocaleString("es-AR", {
+    minimumFractionDigits: 2,
+  });
 
   const prev = () => setActive((i) => (i - 1 + images.length) % images.length);
   const next = () => setActive((i) => (i + 1) % images.length);
-
-  const { add } = useCart();
 
   const handleAddToCart = () => {
     if (!p) return;
     if (!talle) return alert("Elegí un talle");
 
+    // pasamos max = stock del talle para topear dentro del carrito también
     add({
       productoId: p.id,
       nombre: p.nombre,
@@ -75,6 +93,7 @@ const ProductDetail = () => {
       talle,
       cantidad,
       precioUnitario: Number(p.precioFinal),
+      max: maxStock,
     });
     alert("Agregado al carrito");
   };
@@ -99,15 +118,18 @@ const ProductDetail = () => {
     );
   }
 
+  const canAdd =
+    !!talle && maxStock > 0 && cantidad >= 1 && cantidad <= maxStock;
+
   return (
     <main className="bg-white min-vh-100">
       <div className="container py-4">
         <div className="row g-4">
-          {/* Galería (rectangular) */}
+          {/* Galería */}
           <div className="col-12 col-md-6">
             <div
-              className="position-relative border rounded-0 overflow-hidden bg-white"
-              style={{ aspectRatio: "2.5 / 3", maxHeight: 620 }} // más vertical
+              className="position-relative border overflow-hidden bg-white"
+              style={{ aspectRatio: "2.5 / 3", maxHeight: 620 }}
             >
               <img
                 key={images[active]}
@@ -170,17 +192,12 @@ const ProductDetail = () => {
                   <small className="text-muted text-decoration-line-through">
                     ${precioOriginal}
                   </small>
-                  {/* Descuento en gris */}
                   <span className="badge bg-body-secondary text-dark border">
                     -{p.descuentoPct}%
                   </span>
                 </>
               )}
             </div>
-
-            {p.descripcion && (
-              <p className="text-body-secondary">{p.descripcion}</p>
-            )}
 
             {/* Talles */}
             <div className="mb-3">
@@ -206,12 +223,13 @@ const ProductDetail = () => {
             </div>
 
             {/* Cantidad */}
-            <div className="mb-3">
+            <div className="mb-1">
               <label className="form-label">Cantidad</label>
               <div className="input-group" style={{ maxWidth: 180 }}>
                 <button
                   className="btn btn-outline-secondary"
                   onClick={() => setCantidad((c) => Math.max(1, c - 1))}
+                  disabled={cantidad <= 1}
                 >
                   −
                 </button>
@@ -220,34 +238,45 @@ const ProductDetail = () => {
                   className="form-control text-center"
                   min={1}
                   value={cantidad}
-                  onChange={(e) =>
-                    setCantidad(Math.max(1, Number(e.target.value) || 1))
-                  }
+                  onChange={(e) => {
+                    const n = Number(e.target.value) || 1;
+                    const top = maxStock || 1;
+                    setCantidad(Math.max(1, Math.min(n, top)));
+                  }}
                 />
                 <button
                   className="btn btn-outline-secondary"
-                  onClick={() => setCantidad((c) => c + 1)}
+                  onClick={() =>
+                    setCantidad((c) => Math.min(c + 1, maxStock || 1))
+                  }
+                  disabled={cantidad >= (maxStock || 1)}
                 >
                   +
                 </button>
               </div>
+              <small className="text-muted d-block">
+                {talle ? "" : "Elegí un talle"}
+              </small>
             </div>
 
             {/* CTA */}
-            <div className="d-grid gap-2">
+            <div className="d-grid gap-2 mt-2">
               <button
-                className="btn btn-primary btn-lg"
+                className={`btn btn-lg ${
+                  canAdd
+                    ? "btn-primary"
+                    : "btn-outline-dark bg-white text-dark border-dark"
+                }`}
                 onClick={handleAddToCart}
-                disabled={!talle || !tallesDisponibles.length}
+                disabled={!canAdd}
               >
                 Agregar al carrito
               </button>
-              {/* ya NO mostramos “Stock total” */}
             </div>
           </div>
         </div>
 
-        {/* Desplegables tipo acordeón flush (sin JS, con <details>) */}
+        {/* Acordeones */}
         <div className="row mt-4">
           <div className="col-12 col-md-8">
             <details className="border-bottom py-3">

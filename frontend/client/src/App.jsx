@@ -4,12 +4,12 @@ import Home from "./pages/Home";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
-import Community from "./pages/Community";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Account from "./pages/Account";
 import Admin from "./pages/Admin";
 import Checkout from "./pages/Checkout";
+import Footer from "./components/Footer";
 
 export default function App() {
   return (
@@ -33,9 +33,9 @@ export default function App() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/producto/:id" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
-        <Route path="/community" element={<Community />} />
         <Route path="/checkout" element={<Checkout />} />
       </Routes>
+      <Footer />
     </>
   );
 }

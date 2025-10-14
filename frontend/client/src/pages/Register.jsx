@@ -53,8 +53,11 @@ const Register = () => {
 
   return (
     <div className="container py-5 text-light" style={{ maxWidth: "540px" }}>
-      <h1 className="mb-4 text-center">Crear cuenta</h1>
-      <form className="bg-dark border rounded-4 p-4 shadow" onSubmit={handleSubmit}>
+      <h1 className="mb-4 text-center text-secondary">Crear cuenta</h1>
+      <form
+        className="bg-dark border rounded-4 p-4 shadow"
+        onSubmit={handleSubmit}
+      >
         {error && (
           <div className="alert alert-danger" role="alert">
             {error}
@@ -144,7 +147,11 @@ const Register = () => {
             />
           </div>
         </div>
-        <button type="submit" className="btn btn-primary w-100 mt-4" disabled={submitting}>
+        <button
+          type="submit"
+          className="btn btn-primary w-100 mt-4"
+          disabled={submitting}
+        >
           {submitting ? "Creando cuenta..." : "Crear cuenta"}
         </button>
         <p className="mt-4 mb-0 text-center">

@@ -74,36 +74,38 @@ const Shop = () => {
   };
 
   return (
-    <main className="bg-white min-vh-100">
-      <div className="container py-4">
-        {error && <div className="alert alert-danger">{error}</div>}
+    <>
+      <main className="bg-white min-vh-100">
+        <div className="container py-4">
+          {error && <div className="alert alert-danger">{error}</div>}
 
-        <div className="row g-4">
-          {/* Sidebar */}
-          <div className="col-12 col-md-3">
-            <SidebarFilters
-              categoriaId={categoriaId}
-              onChangeCategoria={setCategoriaId}
-              talle={talle}
-              onChangeTalle={setTalle}
-              minFinal={minFinal}
-              maxFinal={maxFinal}
-              onChangePrecio={handleChangePrecio}
-              onClear={handleClear}
-            />
-          </div>
+          <div className="row g-4">
+            {/* Sidebar */}
+            <div className="col-12 col-md-3">
+              <SidebarFilters
+                categoriaId={categoriaId}
+                onChangeCategoria={setCategoriaId}
+                talle={talle}
+                onChangeTalle={setTalle}
+                minFinal={minFinal}
+                maxFinal={maxFinal}
+                onChangePrecio={handleChangePrecio}
+                onClear={handleClear}
+              />
+            </div>
 
-          {/* Contenido */}
-          <div className="col-12 col-md-9">
-            {/* Barra de orden (separada de la sidebar) */}
-            <SortBar value={orden} onChange={setOrden} />
+            {/* Contenido */}
+            <div className="col-12 col-md-9">
+              {/* Barra de orden (separada de la sidebar) */}
+              <SortBar value={orden} onChange={setOrden} />
 
-            {/* Grid */}
-            <ProductsGrid items={productosOrdenados} />
+              {/* Grid */}
+              <ProductsGrid items={productosOrdenados} />
+            </div>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 };
 

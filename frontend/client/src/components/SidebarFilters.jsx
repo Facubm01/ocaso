@@ -62,9 +62,6 @@ const SidebarFilters = ({
             </option>
           ))}
         </select>
-        <div className="form-text">
-          Mostramos productos con ese talle y stock &gt; 0.
-        </div>
       </div>
 
       {/* Precio */}

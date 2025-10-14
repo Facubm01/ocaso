@@ -3,9 +3,13 @@ import { Link } from "react-router-dom";
 const ProductCard = ({ p }) => {
   const tieneDescuento = (p.descuentoPct ?? 0) > 0;
 
-  // ⚠️ Si tu API ya manda decimales, NO /100:
-  const precioOriginal = Number(p.precioOriginal).toFixed(2);
-  const precioFinal = Number(p.precioFinal).toFixed(2);
+  // Formatear precios con separador de miles y coma decimal
+  const precioOriginal = Number(p.precioOriginal).toLocaleString("es-AR", {
+    minimumFractionDigits: 2,
+  });
+  const precioFinal = Number(p.precioFinal).toLocaleString("es-AR", {
+    minimumFractionDigits: 2,
+  });
 
   const src = p?.imageId
     ? `/api/images/${p.imageId}/raw`
@@ -24,7 +28,7 @@ const ProductCard = ({ p }) => {
           draggable="false"
         />
 
-        {/* Badge de descuento en gris de la página */}
+        {/* Badge de descuento */}
         {tieneDescuento && (
           <span
             className="badge position-absolute top-0 start-0 m-2 px-2 py-1 bg-body-secondary text-dark border"

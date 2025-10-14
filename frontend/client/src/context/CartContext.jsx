@@ -10,34 +10,52 @@ export function CartProvider({ children }) {
     const raw = localStorage.getItem("cart");
     if (raw) setItems(JSON.parse(raw));
   }, []);
-  useEffect(() => localStorage.setItem("cart", JSON.stringify(items)), [items]);
+  useEffect(() => {
+    localStorage.setItem("cart", JSON.stringify(items));
+  }, [items]);
 
   // acciones
   const add = (item) => {
+    // item puede traer "max" (stock del talle). Si no viene, no topeamos.
     setItems((prev) => {
       const i = prev.findIndex(
         (x) => x.productoId === item.productoId && x.talle === item.talle
       );
+
+      // cantidad objetivo respetando tope
+      const tope = Number.isFinite(item.max) ? item.max : Infinity;
+
       if (i >= 0) {
         const next = [...prev];
-        next[i] = { ...next[i], cantidad: next[i].cantidad + item.cantidad };
+        const prevMax = next[i].max ?? Infinity;
+        const max = Math.min(Math.max(prevMax, tope), Infinity); // mantener el mayor conocido
+        const nueva = Math.min(next[i].cantidad + item.cantidad, max);
+        next[i] = { ...next[i], cantidad: nueva, max };
         return next;
       }
-      return [...prev, item];
+
+      const nueva = Math.min(item.cantidad, tope);
+      return [...prev, { ...item, cantidad: nueva }];
     });
   };
+
   const setQty = (productoId, talle, cantidad) =>
     setItems((prev) =>
-      prev.map((x) =>
-        x.productoId === productoId && x.talle === talle
-          ? { ...x, cantidad: Math.max(1, cantidad) }
-          : x
-      )
+      prev.map((x) => {
+        if (x.productoId === productoId && x.talle === talle) {
+          const max = x.max ?? Infinity;
+          const target = Math.max(1, Math.min(cantidad, max));
+          return { ...x, cantidad: target };
+        }
+        return x;
+      })
     );
+
   const remove = (productoId, talle) =>
     setItems((prev) =>
       prev.filter((x) => !(x.productoId === productoId && x.talle === talle))
     );
+
   const clear = () => setItems([]);
 
   // derivados
@@ -58,5 +76,6 @@ export function CartProvider({ children }) {
     </CartContext.Provider>
   );
 }
+
 // eslint-disable-next-line react-refresh/only-export-components
 export const useCart = () => useContext(CartContext);

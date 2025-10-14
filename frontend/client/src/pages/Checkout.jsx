@@ -7,7 +7,7 @@ const API_BASE = (
   import.meta.env.VITE_API_BASE_URL || "http://localhost:4002"
 ).replace(/\/$/, "");
 
-const TALLE_MAP = new Set(["XS", "S", "M", "L", "XL"]); // debe coincidir con el enum del backend
+const TALLE_MAP = new Set(["XS", "S", "M", "L", "XL"]); // tiene q coincidir con el enum del backend
 
 export default function CheckoutPage() {
   const { items, subtotal, clear } = useCart();
@@ -15,9 +15,13 @@ export default function CheckoutPage() {
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [receipt, setReceipt] = useState(null); // respuesta del backend
+  const [receipt, setReceipt] = useState(null);
 
-  // Si no hay items, mostramos CTA para volver al shop
+  // helper de formato AR
+  const formatPrice = (n) =>
+    Number(n ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2 });
+
+  // Si no hay items, CTA
   if (!items.length && !receipt) {
     return (
       <main className="bg-white min-vh-100">
@@ -31,17 +35,14 @@ export default function CheckoutPage() {
     );
   }
 
-  // Forzá login antes de pagar
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+  // Forzar login
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   const payload = useMemo(() => {
-    // Mapeo al contrato del backend: { items: [{ productoId, talle, cantidad }] }
     return {
       items: items.map((it) => ({
         productoId: it.productoId,
-        talle: String(it.talle).toUpperCase(), // el backend espera el enum Talle
+        talle: String(it.talle).toUpperCase(),
         cantidad: it.cantidad,
       })),
     };
@@ -51,7 +52,7 @@ export default function CheckoutPage() {
     setBusy(true);
     setError("");
     try {
-      // Validaciones mínimas de front
+      // Validaciones mínimas
       if (!payload.items.length) throw new Error("El carrito está vacío.");
       for (const it of payload.items) {
         if (!Number.isFinite(it.productoId) || it.productoId <= 0)
@@ -71,7 +72,6 @@ export default function CheckoutPage() {
         body: JSON.stringify(payload),
       });
 
-      // Errores típicos del backend: 400 carrito vacío, 404 producto/variante, 409 stock insuficiente
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         throw new Error(text || `Error HTTP ${res.status}`);
@@ -79,8 +79,7 @@ export default function CheckoutPage() {
 
       const data = await res.json();
       setReceipt(data); // { items: [...], total }
-      clear(); // vaciamos carrito local al confirmar
-      // Listo: mostramos resumen debajo
+      clear();
     } catch (e) {
       setError(e.message || "No se pudo procesar el pago.");
     } finally {
@@ -88,7 +87,7 @@ export default function CheckoutPage() {
     }
   };
 
-  // Si ya tenemos recibo, mostramos “orden confirmada”
+  // Recibo confirmado
   if (receipt) {
     return (
       <main className="bg-white min-vh-100">
@@ -112,7 +111,7 @@ export default function CheckoutPage() {
                       <td>
                         <div className="fw-semibold">{ln.nombre}</div>
                         <small className="text-muted">
-                          Unitario: ${Number(ln.precioUnitarioFinal).toFixed(2)}
+                          Unitario: ${formatPrice(ln.precioUnitarioFinal)}
                           {typeof ln.descuentoPctAplicado === "number" &&
                           ln.descuentoPctAplicado > 0
                             ? ` (−${ln.descuentoPctAplicado}%)`
@@ -121,9 +120,7 @@ export default function CheckoutPage() {
                       </td>
                       <td>{ln.talle}</td>
                       <td>{ln.cantidad}</td>
-                      <td className="text-end">
-                        ${Number(ln.subtotal).toFixed(2)}
-                      </td>
+                      <td className="text-end">${formatPrice(ln.subtotal)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -132,9 +129,7 @@ export default function CheckoutPage() {
                     <th colSpan={3} className="text-end">
                       Total
                     </th>
-                    <th className="text-end">
-                      ${Number(receipt.total).toFixed(2)}
-                    </th>
+                    <th className="text-end">${formatPrice(receipt.total)}</th>
                   </tr>
                 </tfoot>
               </table>
@@ -154,7 +149,7 @@ export default function CheckoutPage() {
     );
   }
 
-  // Vista previa + botón pagar
+  // Vista previa + pagar
   return (
     <main className="bg-white min-vh-100">
       <div className="container py-4">
@@ -185,7 +180,7 @@ export default function CheckoutPage() {
                   <div className="text-end">
                     <div className="small text-muted">x{it.cantidad}</div>
                     <div className="fw-semibold">
-                      ${(it.precioUnitario * it.cantidad).toFixed(2)}
+                      ${formatPrice(it.precioUnitario * it.cantidad)}
                     </div>
                   </div>
                 </div>
@@ -193,7 +188,7 @@ export default function CheckoutPage() {
 
               <div className="d-flex justify-content-between mt-2">
                 <strong>Subtotal</strong>
-                <strong>${subtotal.toFixed(2)}</strong>
+                <strong>${formatPrice(subtotal)}</strong>
               </div>
             </div>
           </div>
@@ -201,9 +196,7 @@ export default function CheckoutPage() {
           <div className="col-12 col-lg-4">
             <div className="bg-light border rounded-4 p-3">
               <h2 className="h6">Pago</h2>
-              <p className="text-muted mb-2">
-                Para el TP, simulamos el pago (sin pasarela).
-              </p>
+
               <button
                 className="btn btn-dark w-100"
                 onClick={handlePay}
@@ -211,10 +204,6 @@ export default function CheckoutPage() {
               >
                 {busy ? "Procesando…" : "Confirmar compra"}
               </button>
-              <div className="form-text mt-2">
-                Al confirmar, se valida stock por talle y se descuenta en el
-                servidor.
-              </div>
             </div>
           </div>
         </div>

@@ -19,16 +19,7 @@ const Header = () => {
               Shop
             </NavLink>
           </li>
-          <li className="nav-item">
-            <NavLink to="/last-call" className="nav-link text-light">
-              Last Call
-            </NavLink>
-          </li>
-          <li className="nav-item">
-            <NavLink to="/community" className="nav-link text-light">
-              Community
-            </NavLink>
-          </li>
+
           {isAdmin && (
             <li className="nav-item">
               <NavLink to="/admin" className="nav-link text-light">
@@ -49,18 +40,15 @@ const Header = () => {
         {/* Derecha */}
         <div className="d-flex gap-3 position-absolute end-0 top-50 translate-middle-y me-3">
           <NavLink
-            to="/search"
-            className="nav-link text-light p-0"
-            aria-label="Buscar"
-          >
-            <i className="bi bi-search"></i>
-          </NavLink>
-          <NavLink
             to={isAuthenticated ? "/account" : "/login"}
             className="nav-link text-light p-0"
             aria-label={isAuthenticated ? "Perfil" : "Iniciar sesión"}
           >
-            <i className={`bi ${isAuthenticated ? "bi-person" : "bi-box-arrow-in-right"}`}></i>
+            <i
+              className={`bi ${
+                isAuthenticated ? "bi-person" : "bi-box-arrow-in-right"
+              }`}
+            ></i>
           </NavLink>
           {!isAuthenticated && (
             <Link to="/register" className="btn btn-outline-light btn-sm">
