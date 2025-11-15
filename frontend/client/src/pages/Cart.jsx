@@ -6,18 +6,19 @@ export default function CartPage() {
 
   if (!items.length)
     return (
-      <div className="container py-4 text-center">
-        <p>Tu carrito está vacío.</p>
-        <Link to="/shop" className="btn btn-dark">
-          Ir al shop
-        </Link>
-      </div>
+      <main className="bg-white min-vh-100 d-flex flex-column justify-content-center">
+        <div className="container text-center">
+          <p className="mb-3">Tu carrito está vacío.</p>
+          <Link to="/shop" className="btn btn-dark">
+            Ir al shop
+          </Link>
+        </div>
+      </main>
     );
 
   const clamp = (n, min, max) =>
     Math.max(min, Math.min(n, Number.isFinite(max) ? max : n));
 
-  // Helper de formateo AR
   const formatPrice = (n) =>
     Number(n ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2 });
 

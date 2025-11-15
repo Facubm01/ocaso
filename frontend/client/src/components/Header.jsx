@@ -3,7 +3,7 @@ import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 
 const Header = () => {
-  const { totalCantidad } = useCart(); // 👈 cantidad total en el carrito
+  const { totalCantidad } = useCart();
   const { isAuthenticated, isAdmin } = useAuth();
 
   return (
@@ -40,23 +40,23 @@ const Header = () => {
         {/* Derecha */}
         <div className="d-flex gap-3 position-absolute end-0 top-50 translate-middle-y me-3">
           <NavLink
-            to={isAuthenticated ? "/account" : "/login"}
+            to={isAuthenticated ? "/account" : "/login"} //si está autenticado va a account, sino a login
             className="nav-link text-light p-0"
             aria-label={isAuthenticated ? "Perfil" : "Iniciar sesión"}
           >
             <i
               className={`bi ${
-                isAuthenticated ? "bi-person" : "bi-box-arrow-in-right"
+                isAuthenticated ? "bi-person" : "bi-box-arrow-in-right" //si está autenticado muestra el ícono de persona, sino el de iniciar sesión
               }`}
             ></i>
           </NavLink>
-          {!isAuthenticated && (
+          {!isAuthenticated && ( //si no está autenticado, muestra el botón de registrarse
             <Link to="/register" className="btn btn-outline-light btn-sm">
               Registrarse
             </Link>
           )}
 
-          {/* Carrito con badge */}
+          {/* Carrito con simbolito de cantidades */}
           <NavLink
             to="/cart"
             className="nav-link text-light p-0 position-relative"

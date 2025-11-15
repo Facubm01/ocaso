@@ -54,16 +54,27 @@ const ProductDetail = () => {
 
   const images = useMemo(() => {
     const out = [];
-    if (Array.isArray(p?.imageIds) && p.imageIds.length) {
-      for (const id of p.imageIds) out.push(`/api/images/${id}/raw`);
-    } else if (p?.imageId) {
+
+    // Si existe la portada principal, la ponemos primero
+    if (p?.imageId) {
       out.push(`/api/images/${p.imageId}/raw`);
-    } else if (Array.isArray(p?.galeriaUrls) && p.galeriaUrls.length) {
-      out.push(...p.galeriaUrls);
-    } else if (p?.imagenUrl) {
-      out.push(p.imagenUrl);
     }
-    return out.length ? out : ["/img/placeholder.png"];
+
+    // Luego agregamos las imágenes de galería (sin duplicar la portada)
+    if (Array.isArray(p?.imageIds) && p.imageIds.length) {
+      for (const id of p.imageIds) {
+        if (id !== p.imageId) {
+          out.push(`/api/images/${id}/raw`);
+        }
+      }
+    }
+
+    // Si no hay nada, usamos placeholder
+    if (out.length === 0) {
+      out.push("/img/placeholder.png");
+    }
+
+    return out;
   }, [p]);
 
   const precioOriginal = Number(p?.precioOriginal ?? 0).toLocaleString(
@@ -259,7 +270,7 @@ const ProductDetail = () => {
               </small>
             </div>
 
-            {/* CTA */}
+            {/* boton de agregar */}
             <div className="d-grid gap-2 mt-2">
               <button
                 className={`btn btn-lg ${
@@ -276,7 +287,7 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* Acordeones */}
+        {/* Acordeones  para detalles y cosas*/}
         <div className="row mt-4">
           <div className="col-12 col-md-8">
             <details className="border-bottom py-3">
@@ -315,7 +326,7 @@ const ProductDetail = () => {
                 <span className="text-muted">▾</span>
               </summary>
               <div className="mt-2 text-body-secondary">
-                Av. Siempre Viva 742, Lun–Sáb 10 a 19 h.
+                Italia 3402 Vte. López, Lun–Sáb 10 a 19 h.
               </div>
             </details>
           </div>

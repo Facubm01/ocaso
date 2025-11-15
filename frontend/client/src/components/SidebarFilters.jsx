@@ -1,4 +1,3 @@
-// src/components/SidebarFilters.jsx
 import { useEffect, useState } from "react";
 
 const TALLES = ["XS", "S", "M", "L", "XL"];

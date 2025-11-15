@@ -34,7 +34,6 @@ public class ImageController {
     return ResponseEntity.ok(new ImageResponse(img.getId(), b64));
   }
 
-  // (Opcional) crudo como imagen -> <img src="/api/images/12/raw">
   @GetMapping("/{id}/raw")
   public ResponseEntity<byte[]> getRaw(@PathVariable Long id) {
     Image img = service.get(id);

@@ -1,4 +1,3 @@
-// src/pages/Shop.jsx
 import { useEffect, useMemo, useState } from "react";
 import ProductsGrid from "../components/ProductsGrid";
 import SidebarFilters from "../components/SidebarFilters";
@@ -50,7 +49,7 @@ const Shop = () => {
     );
   }, [productos, talle]);
 
-  // Orden en el front para "últimos" (id DESC). Para precio confías en el backend.
+  // Orden en el front para "últimos" (id DESC).
   const productosOrdenados = useMemo(() => {
     if (orden === "ultimos") {
       return [...productosFiltrados].sort(
@@ -96,7 +95,7 @@ const Shop = () => {
 
             {/* Contenido */}
             <div className="col-12 col-md-9">
-              {/* Barra de orden (separada de la sidebar) */}
+              {/* Barra de orden  */}
               <SortBar value={orden} onChange={setOrden} />
 
               {/* Grid */}

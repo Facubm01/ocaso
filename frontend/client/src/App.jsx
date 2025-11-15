@@ -13,29 +13,24 @@ import Footer from "./components/Footer";
 
 export default function App() {
   return (
-    <>
+    <div className="d-flex flex-column min-vh-100">
       <Header />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        {/* antes mostraba el div “Home” */}
-        <Route path="/shop" element={<Shop />} />
-        <Route
-          path="/last-call"
-          element={<div className="container py-4 text-light">Last Call</div>}
-        />
-        <Route
-          path="/search"
-          element={<div className="container py-4 text-light">Buscar</div>}
-        />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/account" element={<Account />} />
-        <Route path="/admin" element={<Admin />} />
-        <Route path="/producto/:id" element={<ProductDetail />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/checkout" element={<Checkout />} />
-      </Routes>
+
+      <div className="flex-grow-1">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/shop" element={<Shop />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/account" element={<Account />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/producto/:id" element={<ProductDetail />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
+        </Routes>
+      </div>
+
       <Footer />
-    </>
+    </div>
   );
 }

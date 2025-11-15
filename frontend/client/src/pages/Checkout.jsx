@@ -7,7 +7,7 @@ const API_BASE = (
   import.meta.env.VITE_API_BASE_URL || "http://localhost:4002"
 ).replace(/\/$/, "");
 
-const TALLE_MAP = new Set(["XS", "S", "M", "L", "XL"]); // tiene q coincidir con el enum del backend
+const TALLE_MAP = new Set(["XS", "S", "M", "L", "XL"]);
 
 export default function CheckoutPage() {
   const { items, subtotal, clear } = useCart();
@@ -17,11 +17,11 @@ export default function CheckoutPage() {
   const [error, setError] = useState("");
   const [receipt, setReceipt] = useState(null);
 
-  // helper de formato AR
+  // formato argentino
   const formatPrice = (n) =>
     Number(n ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2 });
 
-  // Si no hay items, CTA
+  // Si no hay items
   if (!items.length && !receipt) {
     return (
       <main className="bg-white min-vh-100">
@@ -52,7 +52,7 @@ export default function CheckoutPage() {
     setBusy(true);
     setError("");
     try {
-      // Validaciones mínimas
+      // Validar  básico
       if (!payload.items.length) throw new Error("El carrito está vacío.");
       for (const it of payload.items) {
         if (!Number.isFinite(it.productoId) || it.productoId <= 0)

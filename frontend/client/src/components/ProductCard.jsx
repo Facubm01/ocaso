@@ -17,7 +17,7 @@ const ProductCard = ({ p }) => {
 
   return (
     <div className="card h-100 rounded-0 border shadow-sm position-relative product-card">
-      {/* Imagen full-bleed */}
+      {/* Imagen*/}
       <div className="position-relative overflow-hidden">
         <img
           src={src}
@@ -28,7 +28,7 @@ const ProductCard = ({ p }) => {
           draggable="false"
         />
 
-        {/* Badge de descuento */}
+        {/* Marca el  descuento */}
         {tieneDescuento && (
           <span
             className="badge position-absolute top-0 start-0 m-2 px-2 py-1 bg-body-secondary text-dark border"
@@ -39,7 +39,7 @@ const ProductCard = ({ p }) => {
         )}
       </div>
 
-      {/* Cuerpo */}
+      {/* Cartita */}
       <div className="card-body p-2">
         <h5 className="card-title mb-1 text-dark">{p.nombre}</h5>
 

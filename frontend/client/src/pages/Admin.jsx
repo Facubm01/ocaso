@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 const API_BASE = (
   import.meta.env.VITE_API_BASE_URL || "http://localhost:4002"
 ).replace(/\/$/, "");
+
 const VALID_TALLES = new Set(["XS", "S", "M", "L", "XL"]);
 
 // --- helpers compactos ---
@@ -73,7 +74,6 @@ export default function Admin() {
   useEffect(() => {
     if (!isAuthenticated || !isAdmin) return;
     reloadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isAdmin]);
 
   async function reloadAll() {
@@ -114,7 +114,7 @@ export default function Admin() {
   const onFormChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  // main image
+  // IMAGEN PRINCIPAL
   const handleMainImageChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -216,7 +216,7 @@ export default function Admin() {
     }
   };
 
-  // --- productos (compacto) ---
+  // productos
   const editProduct = (p) => {
     clearMainImage();
     clearGalleryImages();

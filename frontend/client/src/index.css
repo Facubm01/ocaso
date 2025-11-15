@@ -11,13 +11,6 @@ body {
   background: var(--ocaso-dark);
 }
 
-/* Área de contenido (entre navbar y footer) */
-.site-main {
-  background: var(--ocaso-offwhite);
-  color: #212529;
-  min-height: 100dvh; /* asegura altura visual */
-}
-
 /* Cards en modo claro por defecto */
 .card {
   background: #fff; /* cartas blancas en contenido claro */

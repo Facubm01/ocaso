@@ -14,6 +14,7 @@ import "./index.css";
 import { CartProvider } from "./context/CartContext";
 import { AuthProvider } from "./context/AuthContext";
 
+// Renderizado
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <AuthProvider>
