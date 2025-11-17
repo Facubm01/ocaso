@@ -1,10 +1,24 @@
 import { Link, NavLink } from "react-router-dom";
-import { useCart } from "../context/CartContext";
-import { useAuth } from "../context/AuthContext";
+// --- REDUX ---
+import { useSelector } from "react-redux";
+import {
+  selectIsAuthenticated,
+  selectIsAdmin,
+} from "../features/auth/authSlice.js";
+import { selectCartTotalCantidad } from "../features/cart/cartSlice.js"; // <-- 1. IMPORTAR SELECTOR DEL CARRITO
+
+// Ya no usamos NINGÚN hook de Context
+// import { useCart } from "../context/CartContext";
+// import { useAuth } from "../context/AuthContext";
 
 const Header = () => {
-  const { totalCantidad } = useCart();
-  const { isAuthenticated, isAdmin } = useAuth();
+  // --- REDUX ---
+  // Leemos el total de cantidad del estado global del carrito
+  const totalCantidad = useSelector(selectCartTotalCantidad); // <-- 2. USAR SELECTOR
+
+  // Leemos los valores del estado global de auth
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const isAdmin = useSelector(selectIsAdmin);
 
   return (
     <nav
@@ -14,12 +28,12 @@ const Header = () => {
       <div className="container-fluid">
         {/* Izquierda */}
         <ul className="nav position-absolute start-0 top-50 translate-middle-y ms-3">
+          {/* ...código sin cambios... */}
           <li className="nav-item">
             <NavLink to="/shop" className="nav-link text-light">
               Shop
             </NavLink>
           </li>
-
           {isAdmin && (
             <li className="nav-item">
               <NavLink to="/admin" className="nav-link text-light">
@@ -39,18 +53,19 @@ const Header = () => {
 
         {/* Derecha */}
         <div className="d-flex gap-3 position-absolute end-0 top-50 translate-middle-y me-3">
+          {/* ...código sin cambios... */}
           <NavLink
-            to={isAuthenticated ? "/account" : "/login"} //si está autenticado va a account, sino a login
+            to={isAuthenticated ? "/account" : "/login"}
             className="nav-link text-light p-0"
             aria-label={isAuthenticated ? "Perfil" : "Iniciar sesión"}
           >
             <i
               className={`bi ${
-                isAuthenticated ? "bi-person" : "bi-box-arrow-in-right" //si está autenticado muestra el ícono de persona, sino el de iniciar sesión
+                isAuthenticated ? "bi-person" : "bi-box-arrow-in-right"
               }`}
             ></i>
           </NavLink>
-          {!isAuthenticated && ( //si no está autenticado, muestra el botón de registrarse
+          {!isAuthenticated && (
             <Link to="/register" className="btn btn-outline-light btn-sm">
               Registrarse
             </Link>
@@ -63,6 +78,8 @@ const Header = () => {
             aria-label="Carrito"
           >
             <i className="bi bi-bag"></i>
+
+            {/* ESTA LÓGICA AHORA VUELVE A FUNCIONAR */}
             {totalCantidad > 0 && (
               <span
                 className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"

@@ -1,9 +1,23 @@
-import { useCart } from "../context/CartContext";
 import { Link } from "react-router-dom";
+// --- REDUX ---
+import { useSelector, useDispatch } from "react-redux";
+import {
+  selectCartItems,
+  selectCartSubtotal,
+  updateItemQuantity,
+  removeItem,
+} from "../features/cart/cartSlice.js";
+
+// Ya no usamos el hook de Context
+// import { useCart } from "../context/CartContext";
 
 export default function CartPage() {
-  const { items, setQty, remove, subtotal } = useCart();
+  // --- REDUX ---
+  const dispatch = useDispatch();
+  const items = useSelector(selectCartItems);
+  const subtotal = useSelector(selectCartSubtotal);
 
+  // El estado vacío ahora funciona con los 'items' de Redux
   if (!items.length)
     return (
       <main className="bg-white min-vh-100 d-flex flex-column justify-content-center">
@@ -16,9 +30,11 @@ export default function CartPage() {
       </main>
     );
 
+  // Esta función local 'clamp' sigue siendo útil para el input
   const clamp = (n, min, max) =>
     Math.max(min, Math.min(n, Number.isFinite(max) ? max : n));
 
+  // Esta función local de formato sigue perfecta
   const formatPrice = (n) =>
     Number(n ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2 });
 
@@ -46,16 +62,24 @@ export default function CartPage() {
                 <small className="text-muted d-block">Talle: {it.talle}</small>
 
                 <div className="d-flex align-items-center gap-2 mt-1">
+                  {/* Botón de decrementar */}
                   <button
                     className="btn btn-sm btn-outline-secondary"
                     onClick={() =>
-                      setQty(it.productoId, it.talle, it.cantidad - 1)
+                      dispatch(
+                        updateItemQuantity({
+                          productoId: it.productoId,
+                          talle: it.talle,
+                          cantidad: it.cantidad - 1,
+                        })
+                      )
                     }
                     disabled={it.cantidad <= 1}
                   >
                     −
                   </button>
 
+                  {/* Input de cantidad */}
                   <input
                     className="form-control form-control-sm text-center"
                     style={{ width: 64 }}
@@ -64,14 +88,28 @@ export default function CartPage() {
                     value={it.cantidad}
                     onChange={(e) => {
                       const n = Number(e.target.value) || 1;
-                      setQty(it.productoId, it.talle, clamp(n, 1, max));
+                      const nuevaCantidad = clamp(n, 1, max);
+                      dispatch(
+                        updateItemQuantity({
+                          productoId: it.productoId,
+                          talle: it.talle,
+                          cantidad: nuevaCantidad,
+                        })
+                      );
                     }}
                   />
 
+                  {/* Botón de incrementar */}
                   <button
                     className="btn btn-sm btn-outline-secondary"
                     onClick={() =>
-                      setQty(it.productoId, it.talle, it.cantidad + 1)
+                      dispatch(
+                        updateItemQuantity({
+                          productoId: it.productoId,
+                          talle: it.talle,
+                          cantidad: it.cantidad + 1,
+                        })
+                      )
                     }
                     disabled={!canInc}
                   >
@@ -82,9 +120,17 @@ export default function CartPage() {
                     <span className="fw-semibold">
                       ${formatPrice(it.precioUnitario * it.cantidad)}
                     </span>
+                    {/* Botón de Quitar */}
                     <button
                       className="btn btn-sm btn-link text-danger ms-2"
-                      onClick={() => remove(it.productoId, it.talle)}
+                      onClick={() =>
+                        dispatch(
+                          removeItem({
+                            productoId: it.productoId,
+                            talle: it.talle,
+                          })
+                        )
+                      }
                     >
                       Quitar
                     </button>
@@ -97,6 +143,7 @@ export default function CartPage() {
 
         <div className="d-flex justify-content-between align-items-center mt-3">
           <strong>Subtotal</strong>
+          {/* El subtotal ahora viene de Redux */}
           <strong>${formatPrice(subtotal)}</strong>
         </div>
 

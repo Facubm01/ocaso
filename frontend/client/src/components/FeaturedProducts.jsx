@@ -1,6 +1,9 @@
-// src/components/FeaturedProducts.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react"; // Quitamos useState
 import ProductsGrid from "./ProductsGrid";
+// --- REDUX ---
+import { useDispatch, useSelector } from "react-redux";
+import { fetchProducts, selectProducts } from "../features/shop/shopSlice.js";
+// --- FIN REDUX ---
 
 function resolveImagenUrl(p) {
   if (Array.isArray(p.imageIds) && p.imageIds.length)
@@ -11,38 +14,48 @@ function resolveImagenUrl(p) {
 }
 
 export default function FeaturedProducts() {
-  const [all, setAll] = useState([]);
-  const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(true);
+  // --- REDUX ---
+  const dispatch = useDispatch();
+  // Leemos el estado de la lista de productos
+  // Renombramos 'items' a 'productsFromRedux' para claridad
+  const {
+    items: productsFromRedux,
+    status,
+    error: err,
+  } = useSelector(selectProducts);
+  const loading = status === "loading";
+  // --- FIN REDUX ---
 
+  // Ya no necesitamos los useState locales
+  // const [all, setAll] = useState([]);
+  // const [err, setErr] = useState("");
+  // const [loading, setLoading] = useState(true);
+
+  // --- REDUX ---
+  // Reemplazamos el fetch con un dispatch
   useEffect(() => {
-    let alive = true;
-    setLoading(true);
-    setErr("");
-    fetch(`/api/productos`)
-      .then(async (res) => {
-        if (!res.ok)
-          throw new Error(
-            (await res.text().catch(() => "")) || `HTTP ${res.status}`
-          );
-        return res.json();
-      })
-      .then((list) => {
-        if (!alive) return;
-        const normalized = (Array.isArray(list) ? list : []).map((p) => ({
-          ...p,
-          imagenUrl: resolveImagenUrl(p), // <- para tu ProductCard
-        }));
-        setAll(normalized);
-      })
-      .catch((e) => setErr(e.message || "No se pudieron cargar productos."))
-      .finally(() => setLoading(false));
-    return () => {
-      alive = false;
-    };
-  }, []);
+    // Si los productos no se han cargado (ej. el usuario entró directo al Home),
+    // los buscamos. Si ya se cargaron (ej. viene del Shop), reutilizamos.
+    if (status === "idle") {
+      dispatch(fetchProducts()); // Despachamos sin filtros
+    }
+  }, [status, dispatch]);
+  // --- FIN REDUX ---
 
-  // últimos 6: createdAt desc si existe; si no, id desc
+  // Mantenemos tu lógica de normalización
+  // Ahora se alimenta de 'productsFromRedux'
+  const all = useMemo(() => {
+    const normalized = (
+      Array.isArray(productsFromRedux) ? productsFromRedux : []
+    ).map((p) => ({
+      ...p,
+      imagenUrl: resolveImagenUrl(p), // <- para tu ProductCard
+    }));
+    return normalized;
+  }, [productsFromRedux]);
+
+  // Mantenemos tu lógica de sorting
+  // Se alimenta de la lista 'all' normalizada
   const featured = useMemo(() => {
     const sorted = [...all].sort((a, b) => {
       const ad = a.createdAt ? new Date(a.createdAt).getTime() : null;
@@ -58,6 +71,7 @@ export default function FeaturedProducts() {
       <div className="container">
         <h2 className="h3 mb-4 text-center">Destacados</h2>
 
+        {/* El JSX de loading/error ahora usa las variables de Redux */}
         {loading && <p className="text-center text-muted">Cargando…</p>}
         {err && <div className="alert alert-danger text-center">{err}</div>}
         {!loading && !err && featured.length === 0 && (

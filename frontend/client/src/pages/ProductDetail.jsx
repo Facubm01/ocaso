@@ -1,41 +1,64 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useCart } from "../context/CartContext";
+// --- REDUX ---
+import { useDispatch, useSelector } from "react-redux";
+import { addItem } from "../features/cart/cartSlice.js";
+import {
+  fetchProductById,
+  selectCurrentProduct,
+  clearCurrentProduct,
+} from "../features/shop/shopSlice.js";
+// --- FIN REDUX ---
 
 const ProductDetail = () => {
   const { id } = useParams();
-  const { add } = useCart();
+  const dispatch = useDispatch();
 
-  const [p, setP] = useState(null);
-  const [error, setError] = useState("");
+  // --- REDUX ---
+  // Leemos el estado del producto actual desde el store
+  // Renombramos 'data' a 'p' para que el resto del componente no necesite cambios
+  const { data: p, status, error } = useSelector(selectCurrentProduct);
+  // --- FIN REDUX ---
+
+  // Ya no necesitamos estado local para el producto o el error
+  // const [p, setP] = useState(null);
+  // const [error, setError] = useState("");
+
+  // Estado local (sigue igual)
   const [talle, setTalle] = useState("");
   const [cantidad, setCantidad] = useState(1);
   const [active, setActive] = useState(0);
+  const [feedback, setFeedback] = useState({ type: "", message: "" });
 
+  // --- REDUX ---
+  // Reemplazamos el fetch local con un dispatch
   useEffect(() => {
-    setError("");
-    setP(null);
-    setActive(0);
+    // Limpiamos el feedback y estado local al cambiar de ID
     setTalle("");
     setCantidad(1);
-    fetch(`/api/productos/${id}`)
-      .then(async (res) => {
-        if (!res.ok)
-          throw new Error(
-            (await res.text().catch(() => "")) || `HTTP ${res.status}`
-          );
-        return res.json();
-      })
-      .then(setP)
-      .catch((e) => setError(e.message || "No se pudo cargar el producto."));
-  }, [id]);
+    setActive(0);
+    setFeedback({ type: "", message: "" });
 
+    // Despachamos la acción para buscar el producto por ID
+    if (id) {
+      dispatch(fetchProductById(id));
+    }
+
+    // Función de limpieza: se ejecuta al desmontar el componente
+    // Limpia el 'currentProduct' del estado de Redux
+    return () => {
+      dispatch(clearCurrentProduct());
+    };
+  }, [id, dispatch]);
+  // --- FIN REDUX ---
+
+  // (toda la lógica de useMemo, useEffect para maxStock, images, precios...
+  // ... sigue exactamente igual, ya que 'p' ahora viene de Redux)
   const tallesDisponibles = useMemo(() => {
     if (!p || !Array.isArray(p.talles)) return [];
     return p.talles.filter((pt) => pt.stock > 0).map((pt) => pt.talle);
   }, [p]);
 
-  // stock del talle seleccionado
   const maxStock = useMemo(() => {
     if (!p || !Array.isArray(p.talles) || !talle) return 0;
     const found = p.talles.find(
@@ -44,32 +67,39 @@ const ProductDetail = () => {
     return Number(found?.stock ?? 0);
   }, [p, talle]);
 
-  // clamp cantidad al cambiar talle o stock
   useEffect(() => {
     if (maxStock > 0) setCantidad((c) => Math.min(Math.max(1, c), maxStock));
     else setCantidad(1);
   }, [maxStock]);
+
+  useEffect(() => {
+    if (talle && feedback.type === "error") {
+      setFeedback({ type: "", message: "" });
+    }
+  }, [talle, feedback.type]);
 
   const tieneDescuento = p && (p.descuentoPct ?? 0) > 0;
 
   const images = useMemo(() => {
     const out = [];
 
-    // Si existe la portada principal, la ponemos primero
+    const pushUnique = (url) => {
+      if (url && !out.includes(url)) out.push(url);
+    };
+
     if (p?.imageId) {
-      out.push(`/api/images/${p.imageId}/raw`);
+      pushUnique(`/api/images/${p.imageId}/raw`);
     }
 
-    // Luego agregamos las imágenes de galería (sin duplicar la portada)
     if (Array.isArray(p?.imageIds) && p.imageIds.length) {
-      for (const id of p.imageIds) {
-        if (id !== p.imageId) {
-          out.push(`/api/images/${id}/raw`);
+      for (const rawId of p.imageIds) {
+        const id = Number(rawId);
+        if (Number.isFinite(id) && id !== Number(p.imageId)) {
+          pushUnique(`/api/images/${id}/raw`);
         }
       }
     }
 
-    // Si no hay nada, usamos placeholder
     if (out.length === 0) {
       out.push("/img/placeholder.png");
     }
@@ -92,24 +122,30 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     if (!p) return;
-    if (!talle) return alert("Elegí un talle");
-
-    // pasamos max = stock del talle para topear dentro del carrito también
-    add({
-      productoId: p.id,
-      nombre: p.nombre,
-      imagenUrl: p.imageId
-        ? `/api/images/${p.imageId}/raw`
-        : "/img/placeholder.png",
-      talle,
-      cantidad,
-      precioUnitario: Number(p.precioFinal),
-      max: maxStock,
-    });
-    alert("Agregado al carrito");
+    if (!talle) {
+      setFeedback({ type: "error", message: "Por favor, elegí un talle." });
+      return;
+    }
+    dispatch(
+      addItem({
+        productoId: p.id,
+        nombre: p.nombre,
+        imagenUrl: p.imageId
+          ? `/api/images/${p.imageId}/raw`
+          : "/img/placeholder.png",
+        talle,
+        cantidad,
+        precioUnitario: Number(p.precioFinal),
+        max: maxStock,
+      })
+    );
+    setFeedback({ type: "success", message: "¡Agregado al carrito!" });
+    setTimeout(() => setFeedback({ type: "", message: "" }), 3000);
   };
 
-  if (error) {
+  // --- REDUX ---
+  // Actualizamos los mensajes de carga y error para usar el 'status' de Redux
+  if (status === "failed" && error) {
     return (
       <main className="bg-white min-vh-100">
         <div className="container py-4">
@@ -119,7 +155,8 @@ const ProductDetail = () => {
     );
   }
 
-  if (!p) {
+  // Si está cargando, o si 'p' todavía es null (estado inicial)
+  if (status === "loading" || !p) {
     return (
       <main className="bg-white min-vh-100">
         <div className="container py-4">
@@ -128,6 +165,7 @@ const ProductDetail = () => {
       </main>
     );
   }
+  // --- FIN REDUX ---
 
   const canAdd =
     !!talle && maxStock > 0 && cantidad >= 1 && cantidad <= maxStock;
@@ -269,6 +307,18 @@ const ProductDetail = () => {
                 {talle ? "" : "Elegí un talle"}
               </small>
             </div>
+
+            {/* Feedback (reemplaza a los alerts) */}
+            {feedback.message && (
+              <div
+                className={`alert ${
+                  feedback.type === "success" ? "alert-success" : "alert-danger"
+                } mt-3 mb-0`}
+                role="alert"
+              >
+                {feedback.message}
+              </div>
+            )}
 
             {/* boton de agregar */}
             <div className="d-grid gap-2 mt-2">

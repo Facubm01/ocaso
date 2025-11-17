@@ -1,6 +1,17 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+// --- REDUX ---
+import { useDispatch, useSelector } from "react-redux";
+import {
+  registerUser,
+  fetchUserProfile,
+  selectIsAuthenticated,
+  selectAuthStatus,
+  selectAuthError,
+} from "../features/auth/authSlice.js";
+
+// Ya no usamos el hook de Context
+// import { useAuth } from "../context/AuthContext";
 
 const initialState = {
   firstName: "",
@@ -12,9 +23,16 @@ const initialState = {
 
 const Register = () => {
   const navigate = useNavigate();
-  const { register, isAuthenticated } = useAuth();
+  // --- REDUX ---
+  const dispatch = useDispatch();
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const authStatus = useSelector(selectAuthStatus);
+  const authError = useSelector(selectAuthError);
+
   const [formValues, setFormValues] = useState(initialState);
-  const [submitting, setSubmitting] = useState(false);
+  // 'submitting' ahora se deriva del estado de Redux
+  const submitting = authStatus === "loading";
+  // 'error' local solo para validación de cliente (contraseñas no coinciden)
   const [error, setError] = useState("");
 
   if (isAuthenticated) {
@@ -28,26 +46,40 @@ const Register = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    // Validación local
     if (formValues.password !== formValues.confirmPassword) {
       setError("Las contraseñas no coinciden.");
       return;
     }
 
-    setSubmitting(true);
+    // Limpiamos el error local antes de enviar
     setError("");
 
     try {
-      await register({
-        firstName: formValues.firstName,
-        lastName: formValues.lastName,
-        email: formValues.email,
-        password: formValues.password,
-      });
+      // Despachamos la acción de registro
+      const registerAction = await dispatch(
+        registerUser({
+          firstName: formValues.firstName,
+          lastName: formValues.lastName,
+          email: formValues.email,
+          password: formValues.password,
+        })
+      ).unwrap(); // .unwrap() nos permite usar try/catch
+
+      // Si el registro fue exitoso (obtenemos el token)
+      // Buscamos el perfil completo del usuario
+      if (registerAction.access_token) {
+        await dispatch(fetchUserProfile(registerAction.access_token)).unwrap();
+      }
+
+      // Dejamos que el <Navigate> de arriba maneje la redirección,
+      // o navegamos explícitamente:
       navigate("/account", { replace: true });
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setSubmitting(false);
+      // El 'err' es el error de 'rejectWithValue' de nuestro thunk.
+      // Ya está en el estado de Redux (authError), así que no necesitamos 'setError(err.message)'
+      console.error("Fallo el registro:", err);
     }
   };
 
@@ -58,9 +90,16 @@ const Register = () => {
         className="bg-dark border rounded-4 p-4 shadow"
         onSubmit={handleSubmit}
       >
+        {/* Mostramos el error local de validación */}
         {error && (
           <div className="alert alert-danger" role="alert">
             {error}
+          </div>
+        )}
+        {/* Mostramos el error de la API (de Redux) si no hay error local */}
+        {!error && authError && authStatus === "failed" && (
+          <div className="alert alert-danger" role="alert">
+            {authError}
           </div>
         )}
         <div className="row g-3">

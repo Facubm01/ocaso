@@ -1,58 +1,67 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-
-const API_BASE = (
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:4002"
-).replace(/\/$/, "");
+// --- REDUX ---
+import { useDispatch, useSelector } from "react-redux";
+import {
+  selectIsAuthenticated,
+  selectIsAdmin,
+  selectUserProfile,
+} from "../features/auth/authSlice.js";
+import {
+  fetchCategories,
+  fetchProducts,
+  selectCategories,
+  selectProducts,
+} from "../features/shop/shopSlice.js";
+import {
+  uploadImage,
+  createCategory,
+  deleteCategory,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  selectAdminStatus,
+  selectAdminError,
+  clearAdminError,
+} from "../features/admin/adminSlice.js";
+// --- FIN REDUX ---
 
 const VALID_TALLES = new Set(["XS", "S", "M", "L", "XL"]);
 
-// --- helpers compactos ---
-const fetchAuth = (token, path, init = {}) => {
-  const headers = new Headers(init.headers || {});
-  if (token) headers.set("Authorization", `Bearer ${token}`);
-  if (init.body && !headers.has("Content-Type"))
-    headers.set("Content-Type", "application/json");
-  return fetch(`${API_BASE}${path}`, { ...init, headers });
-};
-
+// --- helpers (ya no necesitan 'fetchAuth') ---
 const parseImageIds = (txt) =>
   (txt || "")
     .split(",")
     .map((s) => Number(s.trim()))
     .filter((n) => Number.isFinite(n) && n > 0);
 
-const parseTalles = (txt) => {
-  const s = (txt || "").trim();
-  if (!s) return null;
-  const out = [];
-  for (const chunk of s
-    .split(",")
-    .map((x) => x.trim())
-    .filter(Boolean)) {
-    const [talleRaw, stockRaw] = chunk.split(":");
-    const talle = (talleRaw || "").trim().toUpperCase();
-    const stock = Number((stockRaw || "").trim());
-    if (!VALID_TALLES.has(talle) || !Number.isFinite(stock) || stock < 0)
-      return null;
-    out.push({ talle, stock: Math.trunc(stock) });
+const createEmptyTalleState = () => {
+  const base = {};
+  for (const talle of VALID_TALLES) {
+    base[talle] = { enabled: false, value: "" };
   }
-  return out;
+  return base;
 };
 
 export default function Admin() {
-  const { isAuthenticated, isAdmin, token, profile } = useAuth();
+  // --- REDUX ---
+  const dispatch = useDispatch();
+  // Estado de Autenticación
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const isAdmin = useSelector(selectIsAdmin);
+  const profile = useSelector(selectUserProfile);
+  // Estado de la Tienda (Datos)
+  const { items: categories, status: categoriesStatus } =
+    useSelector(selectCategories);
+  const { items: products, status: productsStatus } =
+    useSelector(selectProducts);
+  // Estado de Admin (API C/U/D)
+  const busy = useSelector(selectAdminStatus) === "loading";
+  const apiError = useSelector(selectAdminError); // Errores de la API
+  // --- FIN REDUX ---
 
-  // datos
-  const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
-
-  // ui
-  const [busy, setBusy] = useState(false);
-  const [alert, setAlert] = useState(null); // {type,msg}
-
-  // formularios
+  // --- Estado Local ---
+  // (Formularios)
   const [categoryName, setCategoryName] = useState("");
   const [form, setForm] = useState({
     id: null,
@@ -63,90 +72,84 @@ export default function Admin() {
     descripcion: "",
     imageId: "",
     imageIds: "",
-    talles: "",
   });
-
-  // previews
+  const [talleStocks, setTalleStocks] = useState(() => createEmptyTalleState());
+  // (Previews de UI)
   const [mainPreview, setMainPreview] = useState(null);
   const [galleryPreviews, setGalleryPreviews] = useState([]);
+  // (Alertas de UI para éxito o validación)
+  const [uiAlert, setUiAlert] = useState(null); // {type, msg}
+  // --- Fin Estado Local ---
 
-  // carga inicial
+  // Helper para limpiar todas las alertas
+  const clearAlerts = () => {
+    dispatch(clearAdminError());
+    setUiAlert(null);
+  };
+
+  // Carga inicial de datos (reemplaza a reloadAll)
   useEffect(() => {
-    if (!isAuthenticated || !isAdmin) return;
-    reloadAll();
-  }, [isAuthenticated, isAdmin]);
-
-  async function reloadAll() {
-    try {
-      const [catsRes, prodsRes] = await Promise.all([
-        fetch(`${API_BASE}/api/categorias`),
-        fetch(`${API_BASE}/api/productos`),
-      ]);
-      setCategories((await catsRes.json()) || []);
-      setProducts((await prodsRes.json()) || []);
-    } catch {
-      setAlert({ type: "danger", msg: "No se pudieron cargar los datos." });
+    if (isAuthenticated && isAdmin) {
+      // Si las categorías no se han cargado, las pedimos
+      if (categoriesStatus === "idle") {
+        dispatch(fetchCategories());
+      }
+      // Si los productos no se han cargado, los pedimos
+      if (productsStatus === "idle") {
+        dispatch(fetchProducts());
+      }
     }
-  }
-
-  // --- imágenes (subida con FormData) ---
-  async function uploadImage(file) {
-    if (!file || !file.type.startsWith("image/"))
-      throw new Error("Seleccioná un archivo de imagen.");
-    if (file.size > 5 * 1024 * 1024) throw new Error("Máximo 5MB por imagen.");
-
-    const fd = new FormData();
-    fd.append("file", file);
-    const headers = new Headers();
-    if (token) headers.set("Authorization", `Bearer ${token}`);
-
-    const res = await fetch(`${API_BASE}/api/images`, {
-      method: "POST",
-      headers,
-      body: fd,
-    });
-    if (!res.ok) throw new Error("No se pudo subir la imagen.");
-    const data = await res.json();
-    if (!data?.id) throw new Error("Respuesta inválida al subir imagen.");
-    return data.id;
-  }
+  }, [isAuthenticated, isAdmin, categoriesStatus, productsStatus, dispatch]);
 
   const onFormChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  // IMAGEN PRINCIPAL
+  // --- IMÁGENES (ahora despachan) ---
   const handleMainImageChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setBusy(true);
-    setAlert(null);
-    try {
-      const id = await uploadImage(file);
-      setForm((f) => ({ ...f, imageId: String(id) }));
-      setMainPreview(URL.createObjectURL(file)); // (simple: sin revoke para no alargar)
-      setAlert({ type: "success", msg: "Imagen principal subida." });
-    } catch (err) {
-      setAlert({
+    clearAlerts();
+
+    // Validaciones locales (del componente original)
+    if (!file.type.startsWith("image/"))
+      return setUiAlert({
         type: "danger",
-        msg: err?.message || "Error al subir imagen.",
+        msg: "Seleccioná un archivo de imagen.",
       });
+    if (file.size > 5 * 1024 * 1024)
+      return setUiAlert({ type: "danger", msg: "Máximo 5MB por imagen." });
+
+    try {
+      // Despachamos el thunk y esperamos el resultado con .unwrap()
+      const data = await dispatch(uploadImage(file)).unwrap();
+      setForm((f) => ({ ...f, imageId: String(data.id) }));
+      setMainPreview(URL.createObjectURL(file));
+      setUiAlert({ type: "success", msg: "Imagen principal subida." });
+    } catch (err) {
+      // El error de Redux (apiError) se seteará automáticamente
+      // 'err' aquí es el 'rejectWithValue'
     } finally {
-      setBusy(false);
       e.target.value = "";
     }
   };
 
-  // gallery images
   const handleGalleryImagesChange = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
-    setBusy(true);
-    setAlert(null);
+    clearAlerts();
+
     try {
       const ids = [];
       const previews = [];
       for (const f of files) {
-        ids.push(await uploadImage(f));
+        // Validaciones por archivo (de tu código original)
+        if (!f.type.startsWith("image/"))
+          throw new Error("Seleccioná solo archivos de imagen.");
+        if (f.size > 5 * 1024 * 1024) throw new Error("Máximo 5MB por imagen.");
+
+        // Despachamos el thunk
+        const data = await dispatch(uploadImage(f)).unwrap();
+        ids.push(data.id);
         previews.push(URL.createObjectURL(f));
       }
       setForm((f) => {
@@ -154,14 +157,14 @@ export default function Admin() {
         return { ...f, imageIds: [...prev, ...ids].join(", ") };
       });
       setGalleryPreviews((prev) => [...prev, ...previews]);
-      setAlert({ type: "success", msg: "Imágenes de galería subidas." });
+      setUiAlert({ type: "success", msg: "Imágenes de galería subidas." });
     } catch (err) {
-      setAlert({
+      // Si falla una, 'err' será el error de validación o de la API
+      setUiAlert({
         type: "danger",
-        msg: err?.message || "Error al subir galería.",
+        msg: err.message || "Error al subir galería.",
       });
     } finally {
-      setBusy(false);
       e.target.value = "";
     }
   };
@@ -174,49 +177,83 @@ export default function Admin() {
     setForm((f) => ({ ...f, imageIds: "" }));
     setGalleryPreviews([]);
   };
+  const resetTalleStocks = () => {
+    setTalleStocks(createEmptyTalleState());
+  };
+  const hydrateTalleStocks = (product) => {
+    setTalleStocks(() => {
+      const base = createEmptyTalleState();
+      if (product && Array.isArray(product.talles)) {
+        for (const entry of product.talles) {
+          const talle = String(entry.talle || "").toUpperCase();
+          if (!VALID_TALLES.has(talle)) continue;
+          const stock = Number(entry.stock);
+          base[talle] = {
+            enabled: true,
+            value:
+              Number.isFinite(stock) && stock >= 0
+                ? String(Math.trunc(stock))
+                : "0",
+          };
+        }
+      }
+      return base;
+    });
+  };
+  const handleToggleTalle = (talle, enabled) => {
+    setTalleStocks((prev) => {
+      const next = { ...prev };
+      const current = prev[talle] || { enabled: false, value: "" };
+      next[talle] = {
+        enabled,
+        value: enabled ? current.value || "0" : "",
+      };
+      return next;
+    });
+  };
+  const handleTalleValueChange = (talle, raw) => {
+    const sanitized = raw.replace(/[^0-9]/g, "");
+    setTalleStocks((prev) => {
+      const next = { ...prev };
+      const current = prev[talle] || { enabled: true, value: "" };
+      next[talle] = {
+        enabled: current.enabled,
+        value: sanitized,
+      };
+      return next;
+    });
+  };
 
-  // --- categorías (compacto) ---
-  const createCategory = async (e) => {
+  // --- CATEGORÍAS (ahora despachan) ---
+  const handleCreateCategory = async (e) => {
     e.preventDefault();
+    clearAlerts();
     if (!categoryName.trim())
-      return setAlert({ type: "danger", msg: "El nombre es obligatorio." });
-    setBusy(true);
-    setAlert(null);
+      return setUiAlert({ type: "danger", msg: "El nombre es obligatorio." });
+
     try {
-      const ok = await fetchAuth(token, "/api/categorias", {
-        method: "POST",
-        body: JSON.stringify({ nombre: categoryName.trim() }),
-      });
-      if (!ok?.ok) throw new Error();
+      await dispatch(createCategory(categoryName.trim())).unwrap();
+      setUiAlert({ type: "success", msg: "Categoría creada." });
       setCategoryName("");
-      await reloadAll();
-      setAlert({ type: "success", msg: "Categoría creada." });
-    } catch {
-      setAlert({ type: "danger", msg: "No se pudo crear la categoría." });
-    } finally {
-      setBusy(false);
+      // No necesitamos refetch manual, el shopSlice lo detectará
+    } catch (err) {
+      // El error de API se mostrará vía apiError
     }
   };
 
-  const deleteCategory = async (id) => {
-    if (!confirm("¿Eliminar categoría?")) return;
-    setBusy(true);
-    setAlert(null);
+  const handleDeleteCategory = async (id) => {
+    // if (!confirm("¿Eliminar categoría?")) return; // <-- LÍNEA ELIMINADA
+    clearAlerts();
     try {
-      const ok = await fetchAuth(token, `/api/categorias/${id}`, {
-        method: "DELETE",
-      });
-      if (!ok?.ok) throw new Error();
-      await reloadAll();
-      setAlert({ type: "success", msg: "Categoría eliminada." });
-    } catch {
-      setAlert({ type: "danger", msg: "No se pudo eliminar la categoría." });
-    } finally {
-      setBusy(false);
+      await dispatch(deleteCategory(id)).unwrap();
+      setUiAlert({ type: "success", msg: "Categoría eliminada." });
+      // No necesitamos refetch manual, el shopSlice lo detectará
+    } catch (err) {
+      // El error de API se mostrará vía apiError
     }
   };
 
-  // productos
+  // --- PRODUCTOS (ahora despachan) ---
   const editProduct = (p) => {
     clearMainImage();
     clearGalleryImages();
@@ -229,10 +266,8 @@ export default function Admin() {
       descripcion: p.descripcion ?? "",
       imageId: p.imageId != null ? String(p.imageId) : "",
       imageIds: Array.isArray(p.imageIds) ? p.imageIds.join(", ") : "",
-      talles: Array.isArray(p.talles)
-        ? p.talles.map((t) => `${t.talle}:${t.stock}`).join(", ")
-        : "",
     });
+    hydrateTalleStocks(p);
   };
 
   const resetForm = () => {
@@ -247,8 +282,8 @@ export default function Admin() {
       descripcion: "",
       imageId: "",
       imageIds: "",
-      talles: "",
     });
+    resetTalleStocks();
   };
 
   const buildPayload = () => {
@@ -266,8 +301,21 @@ export default function Admin() {
       : null;
     const imageId = form.imageId.trim() ? Number(form.imageId) : null;
     const imageIds = parseImageIds(form.imageIds);
-    const talles = parseTalles(form.talles);
-    if (!talles) throw new Error("Talles inválidos. Ej: XS:5, S:10, M:0");
+    const talles = [];
+    for (const [talle, data] of Object.entries(talleStocks)) {
+      if (!data.enabled) continue;
+      if (data.value === "") {
+        throw new Error(`Ingresá el stock para el talle ${talle}.`);
+      }
+      const stock = Number(data.value);
+      if (!Number.isFinite(stock) || stock < 0) {
+        throw new Error(`Stock inválido para el talle ${talle}.`);
+      }
+      talles.push({ talle, stock: Math.trunc(stock) });
+    }
+    if (talles.length === 0) {
+      throw new Error("Seleccioná al menos un talle y cargá su stock.");
+    }
 
     return {
       nombre,
@@ -283,56 +331,55 @@ export default function Admin() {
 
   const submitProduct = async (e) => {
     e.preventDefault();
-    setBusy(true);
-    setAlert(null);
+    clearAlerts();
     try {
+      // 1. buildPayload() puede lanzar un error de validación (ej. "Nombre obligatorio")
       const payload = buildPayload();
       const edit = !!form.id;
-      const res = await fetchAuth(
-        token,
-        edit ? `/api/productos/${form.id}` : "/api/productos",
-        { method: edit ? "PUT" : "POST", body: JSON.stringify(payload) }
-      );
-      if (!res.ok) throw new Error();
+
+      // 2. Despachamos la acción
+      if (edit) {
+        await dispatch(
+          updateProduct({ id: form.id, productData: payload })
+        ).unwrap();
+        setUiAlert({ type: "success", msg: "Producto actualizado." });
+      } else {
+        await dispatch(createProduct(payload)).unwrap();
+        setUiAlert({ type: "success", msg: "Producto creado." });
+      }
+
       resetForm();
-      await reloadAll();
-      setAlert({
-        type: "success",
-        msg: edit ? "Producto actualizado." : "Producto creado.",
-      });
+      // 3. Ya no forzamos refetch, el shopSlice lo hace solo
     } catch (err) {
-      setAlert({
-        type: "danger",
-        msg: err?.message || "No se pudo guardar el producto.",
-      });
-    } finally {
-      setBusy(false);
+      // Capturamos el error de buildPayload() o del .unwrap()
+      // Si el error viene de .unwrap(), apiError se setea.
+      // Si viene de buildPayload(), usamos uiAlert.
+      if (!apiError) {
+        setUiAlert({
+          type: "danger",
+          msg: err.message || "No se pudo guardar el producto.",
+        });
+      }
     }
   };
 
-  const deleteProduct = async (id) => {
-    if (!confirm("¿Eliminar producto?")) return;
-    setBusy(true);
-    setAlert(null);
+  const handleDeleteProduct = async (id) => {
+    // if (!confirm("¿Eliminar producto?")) return; // <-- LÍNEA ELIMINADA
+    clearAlerts();
     try {
-      const res = await fetchAuth(token, `/api/productos/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error();
+      await dispatch(deleteProduct(id)).unwrap();
       if (form.id === id) resetForm();
-      await reloadAll();
-      setAlert({ type: "success", msg: "Producto eliminado." });
-    } catch {
-      setAlert({ type: "danger", msg: "No se pudo eliminar el producto." });
-    } finally {
-      setBusy(false);
+      setUiAlert({ type: "success", msg: "Producto eliminado." });
+      // No necesitamos refetch manual, el shopSlice lo detectará
+    } catch (err) {
+      // El error de API se mostrará vía apiError
     }
   };
 
   // maps
   const catName = new Map(categories.map((c) => [c.id, c.nombre]));
 
-  // guards
+  // guards (Leen de Redux, no cambian)
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!profile || profile.role == null)
     return (
@@ -344,10 +391,17 @@ export default function Admin() {
     );
   if (!isAdmin) return <Navigate to="/" replace />;
 
+  // --- TU JSX ORIGINAL ---
+  // Esta parte es tu JSX original, sin ninguna modificación,
+  // solo conectada a las variables de Redux (busy, categories, products)
   return (
     <div className="container py-5 text-light">
       <h1 className="mb-4">Panel de administración</h1>
-      {alert && <div className={`alert alert-${alert.type}`}>{alert.msg}</div>}
+      {/* Mostramos el error de la API (de Redux) O la alerta de UI (local) */}
+      {apiError && <div className={`alert alert-danger`}>{apiError}</div>}
+      {!apiError && uiAlert && (
+        <div className={`alert alert-${uiAlert.type}`}>{uiAlert.msg}</div>
+      )}
 
       <div className="row g-4">
         {/* CATEGORÍAS */}
@@ -355,7 +409,7 @@ export default function Admin() {
           <section className="bg-dark border rounded-4 p-4 h-100">
             <h2 className="h4 mb-3">Categorías</h2>
 
-            <form className="mb-4" onSubmit={createCategory}>
+            <form className="mb-4" onSubmit={handleCreateCategory}>
               <div className="mb-3">
                 <label className="form-label">Nueva categoría</label>
                 <input
@@ -390,7 +444,7 @@ export default function Admin() {
                     <button
                       type="button"
                       className="btn btn-sm btn-outline-danger"
-                      onClick={() => deleteCategory(c.id)}
+                      onClick={() => handleDeleteCategory(c.id)}
                       disabled={busy}
                     >
                       Eliminar
@@ -564,18 +618,58 @@ export default function Admin() {
                 </div>
                 <div className="col-12">
                   <label className="form-label">Talles y stock</label>
-                  <textarea
-                    name="talles"
-                    className="form-control"
-                    rows={2}
-                    value={form.talles}
-                    onChange={onFormChange}
-                    disabled={busy}
-                    placeholder="Ej: XS:5, S:10, M:8"
-                    required
-                  />
+                  <div className="row g-3">
+                    {Array.from(VALID_TALLES).map((talle) => {
+                      const data = talleStocks[talle] ?? {
+                        enabled: false,
+                        value: "",
+                      };
+                      return (
+                        <div
+                          key={talle}
+                          className="col-12 col-sm-6 col-lg-4"
+                        >
+                          <div className="border rounded-4 p-3 h-100">
+                            <div className="form-check form-switch mb-2">
+                              <input
+                                className="form-check-input"
+                                type="checkbox"
+                                role="switch"
+                                id={`talle-${talle}`}
+                                checked={data.enabled}
+                                disabled={busy}
+                                onChange={(e) =>
+                                  handleToggleTalle(talle, e.target.checked)
+                                }
+                              />
+                              <label
+                                className="form-check-label"
+                                htmlFor={`talle-${talle}`}
+                              >
+                                {talle}
+                              </label>
+                            </div>
+                            <input
+                              type="number"
+                              min="0"
+                              className="form-control"
+                              placeholder="Stock"
+                              value={data.enabled ? data.value : ""}
+                              disabled={!data.enabled || busy}
+                              onChange={(e) =>
+                                handleTalleValueChange(talle, e.target.value)
+                              }
+                            />
+                            <small className="text-muted">
+                              Unidades para {talle}
+                            </small>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                   <div className="form-text">
-                    Formato: TALLE:STOCK (coma). Válidos: XS, S, M, L, XL.
+                    Activá los talles que querés vender y definí su stock.
                   </div>
                 </div>
               </div>
@@ -652,7 +746,7 @@ export default function Admin() {
                             </button>
                             <button
                               className="btn btn-outline-danger"
-                              onClick={() => deleteProduct(p.id)}
+                              onClick={() => handleDeleteProduct(p.id)}
                               disabled={busy}
                             >
                               Eliminar

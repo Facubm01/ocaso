@@ -1,21 +1,44 @@
-import { useMemo, useState } from "react";
+import { useEffect } from "react";
 import { Navigate, Link } from "react-router-dom";
-import { useCart } from "../context/CartContext";
-import { useAuth } from "../context/AuthContext";
+// --- REDUX ---
+import { useSelector, useDispatch } from "react-redux";
+import { selectIsAuthenticated } from "../features/auth/authSlice.js";
+import {
+  selectCartItems,
+  selectCartSubtotal,
+  clearCart,
+} from "../features/cart/cartSlice.js";
+import {
+  processCheckout,
+  selectCheckoutError,
+  selectCheckoutStatus,
+  selectCheckoutReceipt,
+  resetCheckout,
+} from "../features/checkout/checkoutSlice.js";
 
-const API_BASE = (
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:4002"
-).replace(/\/$/, "");
-
-const TALLE_MAP = new Set(["XS", "S", "M", "L", "XL"]);
+// Ya no usamos los hooks de Context
+// import { useCart } from "../context/CartContext";
+// import { useAuth } from "../context/AuthContext";
 
 export default function CheckoutPage() {
-  const { items, subtotal, clear } = useCart();
-  const { isAuthenticated, token } = useAuth();
+  // --- REDUX ---
+  const dispatch = useDispatch();
+  // Leemos el estado del carrito desde Redux
+  const items = useSelector(selectCartItems);
+  const subtotal = useSelector(selectCartSubtotal);
+  // Leemos el estado de autenticación desde Redux
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const status = useSelector(selectCheckoutStatus);
+  const apiError = useSelector(selectCheckoutError);
+  const receipt = useSelector(selectCheckoutReceipt);
+  const busy = status === "loading";
 
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [receipt, setReceipt] = useState(null);
+  useEffect(() => {
+    dispatch(resetCheckout());
+    return () => {
+      dispatch(resetCheckout());
+    };
+  }, [dispatch]);
 
   // formato argentino
   const formatPrice = (n) =>
@@ -38,52 +61,12 @@ export default function CheckoutPage() {
   // Forzar login
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  const payload = useMemo(() => {
-    return {
-      items: items.map((it) => ({
-        productoId: it.productoId,
-        talle: String(it.talle).toUpperCase(),
-        cantidad: it.cantidad,
-      })),
-    };
-  }, [items]);
-
   const handlePay = async () => {
-    setBusy(true);
-    setError("");
     try {
-      // Validar  básico
-      if (!payload.items.length) throw new Error("El carrito está vacío.");
-      for (const it of payload.items) {
-        if (!Number.isFinite(it.productoId) || it.productoId <= 0)
-          throw new Error("Producto inválido.");
-        if (!TALLE_MAP.has(it.talle))
-          throw new Error(`Talle inválido: ${it.talle}`);
-        if (!Number.isFinite(it.cantidad) || it.cantidad < 1)
-          throw new Error("Cantidad inválida.");
-      }
-
-      const res = await fetch(`${API_BASE}/api/checkout`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(text || `Error HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
-      setReceipt(data); // { items: [...], total }
-      clear();
-    } catch (e) {
-      setError(e.message || "No se pudo procesar el pago.");
-    } finally {
-      setBusy(false);
+      await dispatch(processCheckout(items)).unwrap();
+      dispatch(clearCart());
+    } catch (err) {
+      // El error ya se maneja en el slice de checkout
     }
   };
 
@@ -154,7 +137,7 @@ export default function CheckoutPage() {
     <main className="bg-white min-vh-100">
       <div className="container py-4">
         <h1 className="h4 mb-3">Checkout</h1>
-        {error && <div className="alert alert-danger">{error}</div>}
+        {apiError && <div className="alert alert-danger">{apiError}</div>}
 
         <div className="row g-4">
           <div className="col-12 col-lg-8">
