@@ -1,6 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+// --- REDUX ---
+import { useDispatch, useSelector } from "react-redux";
+import {
+  loginUser,
+  fetchUserProfile,
+  selectIsAuthenticated,
+  selectAuthStatus,
+  selectAuthError,
+} from "../features/auth/authSlice";
+
+// Ya no usamos el hook de Context
+// import { useAuth } from "../context/AuthContext";
 
 const initialState = {
   email: "",
@@ -9,11 +20,20 @@ const initialState = {
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
-  const [formValues, setFormValues] = useState(initialState);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  // --- REDUX ---
+  const dispatch = useDispatch();
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const authStatus = useSelector(selectAuthStatus);
+  const authError = useSelector(selectAuthError);
 
+  const [formValues, setFormValues] = useState(initialState);
+  // El error local ya no es necesario, lo leemos de Redux (authError)
+  // const [error, setError] = useState("");
+
+  // El estado 'submitting' ahora deriva del 'authStatus'
+  const submitting = authStatus === "loading";
+
+  // Redirige si ya está autenticado
   if (isAuthenticated) {
     return <Navigate to="/account" replace />;
   }
@@ -25,26 +45,46 @@ const Login = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setSubmitting(true);
-    setError("");
 
+    // Despachamos la acción asíncrona de login
+    // 'unwrap' nos permite capturar el resultado o el error del thunk
     try {
-      await login(formValues.email, formValues.password);
+      const loginAction = await dispatch(
+        loginUser({
+          email: formValues.email,
+          password: formValues.password,
+        })
+      ).unwrap();
+
+      // Si el login fue exitoso (obtenemos el token)
+      // Buscamos el perfil completo del usuario
+      if (loginAction.access_token) {
+        await dispatch(fetchUserProfile(loginAction.access_token)).unwrap();
+      }
+
+      // La redirección la manejaremos con un useEffect o
+      // simplemente dejamos que el componente se re-renderice
+      // y el <Navigate> de arriba haga su trabajo.
+      // Por claridad, podemos navegar aquí también:
       navigate("/account", { replace: true });
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setSubmitting(false);
+      // El error ya está siendo seteado en el estado de Redux por el thunk
+      // No necesitamos hacer setError(err.message)
+      console.error("Fallo el login:", err);
     }
   };
 
   return (
     <div className="container py-5 text-light" style={{ maxWidth: "480px" }}>
       <h1 className="mb-4 text-center">Iniciar sesión</h1>
-      <form className="bg-dark border rounded-4 p-4 shadow" onSubmit={handleSubmit}>
-        {error && (
+      <form
+        className="bg-dark border rounded-4 p-4 shadow"
+        onSubmit={handleSubmit}
+      >
+        {/* Leemos el error del estado de Redux */}
+        {authError && authStatus === "failed" && (
           <div className="alert alert-danger" role="alert">
-            {error}
+            {authError}
           </div>
         )}
         <div className="mb-3">
@@ -79,7 +119,11 @@ const Login = () => {
             disabled={submitting}
           />
         </div>
-        <button type="submit" className="btn btn-primary w-100" disabled={submitting}>
+        <button
+          type="submit"
+          className="btn btn-primary w-100"
+          disabled={submitting}
+        >
           {submitting ? "Ingresando..." : "Ingresar"}
         </button>
         <p className="mt-4 mb-0 text-center">

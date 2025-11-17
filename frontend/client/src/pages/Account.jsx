@@ -1,19 +1,34 @@
 import { Navigate, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+// --- REDUX ---
+import { useDispatch, useSelector } from "react-redux";
+import {
+  logout,
+  selectIsAuthenticated,
+  selectUserProfile,
+} from "../features/auth/authSlice.js"; // <-- CORRECCIÓN: Añadido .js
+
+// Ya no usamos el hook de Context
+// import { useAuth } from "../context/AuthContext";
 
 const Account = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, profile, logout } = useAuth();
+  // --- REDUX ---
+  const dispatch = useDispatch();
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const profile = useSelector(selectUserProfile);
 
+  // Esta lógica de protección de ruta sigue funcionando igual
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
   const handleLogout = () => {
-    logout();
+    // Despachamos la acción síncrona de logout
+    dispatch(logout());
     navigate("/", { replace: true });
   };
 
+  // Esta lógica para mostrar el nombre sigue funcionando igual
   const displayName = profile?.firstName
     ? `${profile.firstName} ${profile.lastName ?? ""}`.trim()
     : profile?.email ?? "Tu cuenta";
@@ -26,7 +41,11 @@ const Account = () => {
           Tu sesión está activa. Desde aquí pronto podrás administrar tus datos,
           direcciones y pedidos.
         </p>
-        <button type="button" className="btn btn-outline-light" onClick={handleLogout}>
+        <button
+          type="button"
+          className="btn btn-outline-light"
+          onClick={handleLogout}
+        >
           Cerrar sesión
         </button>
       </div>
